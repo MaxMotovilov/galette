@@ -3,6 +3,8 @@ galette
 
 Session store/session backup/SSO based on encrypted cookies; implemented as [Connect](http://www.senchalabs.org/connect) middleware for Node.js.
 
+[TL;DR](#api-and-usage-examples)
+
 Rationale
 ---------
 
