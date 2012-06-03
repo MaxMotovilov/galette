@@ -143,9 +143,21 @@ value; to disable session keep-alive completely set it to a value greater or equ
 * `ignoreChanges`: set to `true` to disable refresh of the cookie when `req.session` or `req.creds` are modified by your application. The session data or credential
 backup data will be frozen after initial population; the cookie may still be refreshed as part of the keep-alive logic if so desired (see `refreshAfter`).
 
-* `cipher`
+* `timestamp`: defaults to `true` which causes the `"exp"` property to be added to the cookie content and checked on every access to guard against possible replay
+attacks. Set to `false` when application-controlled checks make the timestamp unnecessary/
 
-* `keyManager`
+* `cipher`: a callback function accepting two arguments -- `key` and `plaintext` -- as binary-encoded strings. The library provides a default version 
+using AES-256 (expecting 256-bit keys from the key manager).
 
-* `secret`
+* `decipher`: a callback function accepting two arguments -- `key` and `ciphertext` as binary-encoded strings. The library provides a counterpart to
+the default implementation of `cipher`.
+
+* `keyManager`: a callback function called with no arguments to generate a new key or with a single string argument `keyId` taken from the cookie name. In
+either case, the key manager should return a plain object with 2 properties: `id` and `key`. The key returned should be compatible with `cipher` and
+`decipher` implementations in use. The library provides a default key manager that uses a stored (either configured or automatically generated) secret
+and combines it with a random nonce to obtain the key.
+
+* `secret`: only used by the default key manager. If not set, the secret is generated automatically so it could not be shared with other instances of the
+same application or with other applications and it will not be preserved across the server restart. Set it to a long (192 bit or more) pseudorandom bit string
+(in binary encoding); you can obtain one from `crypto.randomBytes()`.
 
