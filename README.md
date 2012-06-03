@@ -70,7 +70,7 @@ simple and robust approach is to create a new key for every encryption by combin
 and including the nonce (or enough information to reconstruct it) in the key identifier part of the cookie name. When used for SSO purposes, the secret key must be
 shared between all participating application instances.
 
-* This implementation provides a simple key manager that uses current UTC timestamp as a nonce. This does not guarantee key uniqueness but should be sufficient
+* This implementation provides a simple key manager that uses random 64-bit number as a nonce. This does not guarantee key uniqueness but should be sufficient
 in most cases; enterprise-level single sign-on requires significantly more sophisticated key management strategies that should be implemented by the users of the library.
 
 ### Usage scenarios
@@ -92,3 +92,60 @@ Enterprise-wide single sign on requires sophisticated key management to guard ag
 
 API and usage examples
 ----------------------
+
+### Session store
+
+	var galette = require( 'galette' ),
+		connect = require('connect'),
+		app = connect()
+			.use( connect.cookieParser() )
+			.use( galette.session( /* options */ ) )
+			.use( /* Your application */ );
+
+Installs cookie-based session middleware into the middleware stack. Do not use `galette.session()` together with `connect.session()` -- while they provide identical 
+services to the rest of the application, each takes control over `req.session`. Your application is responsible for populating `req.session` as part of its sign-on process
+in the same way it would be with [Connect built-in session middleware](http://www.senchalabs.org/connect/session.html).
+
+### Session/credential backup
+
+	var galette = require( 'galette' ),
+		connect = require('connect'),
+		app = connect()
+			.use( connect.cookieParser( "secret" ) )
+			.use( connect.session( /* connect.session options */ ) )
+			.use( galette.creds( /* options */ ) )
+			.use( /* Your application */ );
+
+Installs credential backup middleware into the middleware stack. It does not replace `connect.sesssion()` and does not work with `req.session`. Instead, it uses another 
+property of the request object, `req.creds`: your application is expected to populate it as part of the sign-on and can use the information in it  to re-establish 
+the session if `req.session` is not available.
+
+### Single sign-on
+
+To implement single sign-on, use either of the approaches above. Your application (service provider, in SSO terms) is responsible for forwarding the browser to the
+single sign-on page (identity provider) if either `req.session` or `req.creds` are not available. The sign-on page is responsible for populating either `req.session` or
+`req.creds` and forwarding the browser back to the application. This library does not provide any support for page forwarding or implement a key management scheme
+to properly deal with shared secrets -- unless you choose to store the shared secret(s) directly in the configuration or code of all applications participating in the
+SSO (see the section below).
+
+### Options
+
+Both `galette.session()` and `galette.creds()` understand a common dictionary of options:
+
+* `cookieName`: first part of the cookie name (before the dot). Defaults to `"session"` for `galette.session()`, `"creds"` for `galette.creds()`.
+
+* `expireAfter`: session lifetime in seconds (or lifetime of the credentials backup). Defaults to 3600 (1 hour).
+
+* `refreshAfter`: forces re-encryption of the cookie after so many seconds from its creation or last refresh. If not set, defaults to 1/2 of `expireAfter` 
+value; to disable session keep-alive completely set it to a value greater or equal to `expireAfter` (it will still be refreshed if `req.session` or 
+`req.creds`, respectively, are modified). Setting it to 0 will force the cookie to refresh on every request no matter what.
+
+* `ignoreChanges`: set to `true` to disable refresh of the cookie when `req.session` or `req.creds` are modified by your application. The session data or credential
+backup data will be frozen after initial population; the cookie may still be refreshed as part of the keep-alive logic if so desired (see `refreshAfter`).
+
+* `cipher`
+
+* `keyManager`
+
+* `secret`
+
