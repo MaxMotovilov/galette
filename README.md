@@ -146,13 +146,13 @@ backup data will be frozen after initial population; the cookie may still be ref
 * `timestamp`: defaults to `true` which causes the `"exp"` property to be added to the cookie content and checked on every access to guard against possible replay
 attacks. Set to `false` when application-controlled checks make the timestamp unnecessary/
 
-* `cipher`: a callback function accepting two arguments -- `key` and `plaintext` -- as binary-encoded strings. The library provides a default version 
-using AES-256 (expecting 256-bit keys from the key manager).
+* `cipher`: a callback function accepting two arguments (key and plaintext) and returning the ciphertext, all as binary-encoded strings. The library 
+provides a default version using AES-256 (expecting 256-bit keys from the key manager).
 
-* `decipher`: a callback function accepting two arguments -- `key` and `ciphertext` as binary-encoded strings. The library provides a counterpart to
-the default implementation of `cipher`.
+* `decipher`: a callback function accepting two arguments (key and ciphertext) and returning the plaintext, all as binary-encoded strings. The library 
+provides a counterpart to the default implementation of `cipher`.
 
-* `keyManager`: a callback function called with no arguments to generate a new key or with a single string argument `keyId` taken from the cookie name. In
+* `keyManager`: a callback function called with no arguments to generate a new key or with a single string argument, key ID, taken from the cookie name. In
 either case, the key manager should return a plain object with 2 properties: `id` and `key`. The key returned should be compatible with `cipher` and
 `decipher` implementations in use. The library provides a default key manager that uses a stored (either configured or automatically generated) secret
 and combines it with a random nonce to obtain the key.
