@@ -28,8 +28,8 @@ interoperable manner, perhaps becoming a reference implementation for a new stan
 Prior art
 ---------
 
-* Sessions in cookies (Node.js): [1](/jxa/Connect-Cookie-Session-Storage), [2](/benadida/node-client-sessions)
-* Cookie-based SSO: [3](http://support.ideascale.com/kb/ideascale-setup/single-sign-on-multipass-token-based-cookie-based)
+* Sessions in cookies (Node.js): [1](http://www.senchalabs.org/connect/cookieSession.html), [2](/jxa/Connect-Cookie-Session-Storage), [3](/benadida/node-client-sessions)
+* Cookie-based SSO: [4](http://support.ideascale.com/kb/ideascale-setup/single-sign-on-multipass-token-based-cookie-based)
 
 Conventions and interoperability
 --------------------------------
@@ -144,7 +144,7 @@ value; to disable session keep-alive completely set it to a value greater or equ
 backup data will be frozen after initial population; the cookie may still be refreshed as part of the keep-alive logic if so desired (see `refreshAfter`).
 
 * `timestamp`: defaults to `true` which causes the `"exp"` property to be added to the cookie content and checked on every access to guard against possible replay
-attacks. Set to `false` when application-controlled checks make the timestamp unnecessary/
+attacks. Set to `false` when application-controlled checks make the timestamp unnecessary.
 
 * `cipher`: a callback function accepting two arguments (key and plaintext) and returning the ciphertext, all as binary-encoded strings. The library 
 provides a default version using AES-256 (expecting 256-bit keys from the key manager).

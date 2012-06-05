@@ -6,7 +6,7 @@
     "name": "Max Motovilov",
     "email": "max@motovilov.com"
   },
-  "main": "index.js",
+  "main": "galette.js",
   "files": [
     "package.json",
     "galette.js",

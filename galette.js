@@ -13,7 +13,7 @@ function useDefaults( options ) {
 		throw Error( '"cipher" and "decipher" should be specified together' );
 
 	if( !options.cipher )
-		connect.utils.merge( options, require( './lib/cipher' );
+		connect.utils.merge( options, require( './lib/cipher' ) );
 
 	if( !options.keyManager )
 		options.keyManager = require( './lib/key_manager' )( options.secret );
