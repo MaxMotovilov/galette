@@ -63,15 +63,32 @@ create the session anew).
 
 ### Encryption and key management
 
-* Symmetric encryption is strongly suggested (current implementation uses AES-256-CBC).
+* Symmetric encryption is strongly suggested.
 
 * As unencrypted content of the cookie is relatively predictable, encryption keys [should not be reused](http://en.wikipedia.org/wiki/Known-plaintext_attack). The
 simple and robust approach is to create a new key for every encryption by combining a strong secret key with a [nonce](http://en.wikipedia.org/wiki/Cryptographic_nonce)
 and including the nonce (or enough information to reconstruct it) in the key identifier part of the cookie name. When used for SSO purposes, the secret key must be
 shared between all participating application instances.
 
-* This implementation provides a simple key manager that uses random 64-bit number as a nonce. This does not guarantee key uniqueness but should be sufficient
+* This implementation provides a simple key manager that uses current timestamp as a nonce. This does not guarantee key uniqueness but should be sufficient
 in most cases; enterprise-level single sign-on requires significantly more sophisticated key management strategies that should be implemented by the users of the library.
+
+#### Implementation details
+
+In order for the overall scheme to be interoperable, both key management and encryption should be well defined and supported by all participant. Current implementation
+can be interoperable with any other platform supporting AES-256-CBC and SHA1, provided that a shared secret is specified by the user of the library.
+
+The encryption keys are created as follows:
+
+* Lower 48 bits of the current [UNIX time](http://en.wikipedia.org/wiki/Unix_time) expressed in milliseconds, in [little-endian](http://en.wikipedia.org/wiki/Endianness)
+encoding are used as a nonce and stored as the key ID;
+* The 256-bit AES encryption key is created by computing [HKDF](https://tools.ietf.org/html/rfc5869) with the 48-bit value from previous step as input key material and
+the shared secret as the salt.
+
+The cookie content is encrypted as follows:
+
+* AES-256 with cipher-block chaining (`aes-256-cbc` in OpenSSL terms) is applied to the BSON-encoded binary buffer with a random 128-bit initialization vector;
+* The resulting binary sequence is prefixed with the initialization vector, resulting in `16*(2+ceil(bson.length/16))` bytes of data before base-64 encoding.
 
 ### Usage scenarios
 
@@ -158,6 +175,6 @@ either case, the key manager should return a plain object with 2 properties: `id
 and combines it with a random nonce to obtain the key.
 
 * `secret`: only used by the default key manager. If not set, the secret is generated automatically so it could not be shared with other instances of the
-same application or with other applications and it will not be preserved across the server restart. Set it to a long (192 bit or more) pseudorandom bit string
+same application or with other applications and it will not be preserved across the server restart. Set it to a long (160 bit is good) pseudorandom bit string
 (in binary encoding); you can obtain one from `crypto.randomBytes()`.
 
