@@ -19,7 +19,7 @@ function useDefaults( options ) {
 		options.keyManager = require( './lib/key_manager' )( options.secret );
 
 	if( !('expireAfter' in options) )
-		options.expireAfter = options.cookie && options.cookie.maxAge || 0;
+		options.expireAfter = ( options.cookie && options.cookie.maxAge || 0 ) * 1000;
 
 	if( options.expireAfter && !('timestamp' in options) )		
 		options.timestamp = true;
