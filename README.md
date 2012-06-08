@@ -81,9 +81,9 @@ can be interoperable with any other platform supporting AES-256-CBC and SHA1, pr
 The encryption keys are created as follows:
 
 * Lower 48 bits of the current [UNIX time](http://en.wikipedia.org/wiki/Unix_time) expressed in milliseconds, in [little-endian](http://en.wikipedia.org/wiki/Endianness)
-encoding are used as a nonce and stored as the key ID;
-* The 256-bit AES encryption key is created by computing [HKDF](https://tools.ietf.org/html/rfc5869) with the 48-bit value from previous step as input key material and
-the shared secret as the salt.
+encoding are used as a nonce and also stored as the key ID in hexadecimal form;
+* The 256-bit AES encryption key is created by computing [HKDF](https://tools.ietf.org/html/rfc5869) using SHA1 as hash function, with the 48-bit value from the 
+previous step as input key material and the shared secret as salt.
 
 The cookie content is encrypted as follows:
 

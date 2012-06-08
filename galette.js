@@ -33,15 +33,20 @@ function useDefaults( options ) {
 		options.name = 'session';
 
 	if( !options.cookie )
-		options.cookie = { httpOnly: true };
-	else if( options.cookie.maxAge )
-		delete options.cookie.maxAge;
+		options.cookie = { httpOnly: true, path: '/' };
+	else {	
+		if( options.cookie.maxAge )
+			delete options.cookie.maxAge;
+		if( !options.cookie.path )
+			options.cookie.path = '/';
+	}
 }
 
 function patchServerResponse( res, async_update ) {
 	var writeHead = res.writeHead,
 		_send = res._send,
-		queue = [];
+		queue = [],
+		started;
 
 	function bind( self, fn, args ) {
 		return function(){
@@ -53,25 +58,26 @@ function patchServerResponse( res, async_update ) {
 		this.statusCode = status;
 		queue.push( bind( this, writeHead, arguments ) );
 
-		promise.when(
-			async_update( res ),
-			function() {
-				res.writeHead = writeHead;
-				res._send = _send;
-				queue.forEach( function(c){c();} );
-			},
-			function( err ) {
-				res.writeHead = writeHead;
-				res._send = _send;
-				res.writeHead( 500, {
-					'Content-Type': 'text/plain'
-				} );
-				res.end( 
-					'galette failed to update session cookie(s):\n' +
-					err.toString()
-				);
-			}
-		);
+		if( !started )
+			started = promise.when(
+				async_update( res ),
+				function() {
+					res.writeHead = writeHead;
+					res._send = _send;
+					queue.forEach( function(c){c();} );
+				},
+				function( err ) {
+					res.writeHead = writeHead;
+					res._send = _send;
+					res.writeHead( 500, {
+						'Content-Type': 'text/plain'
+					} );
+					res.end( 
+						'galette failed to update session cookie(s):\n' +
+						err.toString()
+					);
+				}
+			);
 	}
 
 	res._send = function() {
@@ -103,9 +109,9 @@ module.exports = function( options ) {
 					} )
 			),
 			(function() { 
-				this.resume();
 				next();
-			 }).bind( req.pause() )
+				this.resume();
+			 }).bind( connect.utils.pause( req ) )
 		);
 		
 		patchServerResponse( res, state.commit.bind( req[name] ) );
