@@ -42,12 +42,14 @@ mostly because it supports binary data and thus can store secure credentials wit
 * There is exactly one field with predefined meaning: `"exp"` (expiration); if present, it should contain a 64-bit UTC timestamp (BSON type `0x09`) determining 
 expiration time of the cookie used in order to guard against a [replay attack](http://en.wikipedia.org/wiki/Replay_attack).
 
-* BSON-encoded binary string is encrypted (see below) and then base-64 encoded.
+* BSON-encoded binary string is encrypted (see below) and then base-64 encoded. In the resulting encoding, characters `"+"` (plus), `"/"` (forward slash) and `"="` (equals) 
+are replaced with `"."` (period), `"_"` (underscore) and `"-"`, respectively, in order to avoid potential issues with URL encoding of cookie content performed by some
+server-side frameworks.
 
 ### Cookie names and HTTP attributes
 
-* The cookies have two-part names separated by dot: the first part is a user-defined prefix (suggested defaults are `"session"` for session store cookies and `"creds"` 
-for session backup/single sign-on credentials); the second part identifies the encryption key used to create the cookie and its meaning depends on the _key manager_.
+* The cookies have two-part names separated by dot: the first part is a user-defined prefix (suggested default is `"session"`); the second part identifies the 
+encryption key used to create the cookie and its meaning depends on the _key manager_.
 
 * When used within single application, session store or backup cookies should use the default HTTP domain (equal to host). When used for single sign-on purposes within
 a single higher-level DNS domain, the HTTP `Domain` attribute should be set explicitly.
@@ -93,8 +95,8 @@ The cookie content is encrypted as follows:
 ### Usage scenarios
 
 * Session store for a single application: the application itself handles the sign-on sequence and stores session info in the cookie. Re-encrypting and re-sending the
-cookie on every request is relatively expensive even if new key is not generated every time (although it really ought to be) therefore if session data does not change
-often, cookie only needs to be re-encrypted to avoid expiration of the active session which can be done relatively infrequently. Current implementation's default is
+cookie on every request is relatively expensive even if a new key is not generated every time (although it really ought to be) therefore -- if session data does not change
+often -- cookie only needs to be re-encrypted to avoid expiration of the active session which can be done relatively infrequently. Current implementation's default is
 to refresh the cookie once half of the session lifetime has passed.
 
 * Session backup for a single application: the application uses traditional session data storage (for example, because session data is large or changes frequently) but
@@ -110,13 +112,16 @@ Enterprise-wide single sign on requires sophisticated key management to guard ag
 API and usage examples
 ----------------------
 
+The library API is intentionally kept backward compatible with [Connect sessions](http://www.senchalabs.org/connect/session.html) to the largest possible extent. Note
+that `galette` can be used either as a drop-in replacement for `connect.session` or in conjunction with it (to provide session backup and/or single signon capability).
+
 ### Session store
 
 	var galette = require( 'galette' ),
 		connect = require('connect'),
 		app = connect()
 			.use( connect.cookieParser() )
-			.use( galette.session( /* options */ ) )
+			.use( galette( /* options */ ) )
 			.use( /* Your application */ );
 
 Installs cookie-based session middleware into the middleware stack. Do not use `galette.session()` together with `connect.session()` -- while they provide identical 
@@ -130,12 +135,15 @@ in the same way it would be with [Connect built-in session middleware](http://ww
 		app = connect()
 			.use( connect.cookieParser( "secret" ) )
 			.use( connect.session( /* connect.session options */ ) )
-			.use( galette.creds( /* options */ ) )
+			.use( galette({ 
+				name: /* something other than "session" */
+				/* other options */ 
+			}) )
 			.use( /* Your application */ );
 
 Installs credential backup middleware into the middleware stack. It does not replace `connect.sesssion()` and does not work with `req.session`. Instead, it uses another 
-property of the request object, `req.creds`: your application is expected to populate it as part of the sign-on and can use the information in it  to re-establish 
-the session if `req.session` is not available.
+property of the request object: you specify its name using the `"name"` property of the options dictionary. Your application is expected to populate it as part of the 
+sign-on and can use the information in it  to re-establish the session if `req.session` is not available.
 
 ### Single sign-on
 
@@ -147,34 +155,63 @@ SSO (see the section below).
 
 ### Options
 
-Both `galette.session()` and `galette.creds()` understand a common dictionary of options:
+* `name`: name of the property of the request object where session information will be stored; also, first part of the cookie name (before the dot). Defaults to 
+`"session"`.
 
-* `cookieName`: first part of the cookie name (before the dot). Defaults to `"session"` for `galette.session()`, `"creds"` for `galette.creds()`.
+* `expireAfter`: session and cookie lifetime in milliseconds. If set to `null`, uses browser-session cookies and does not trake the lifetime; this is also the default
+behavior when neither `expireAfter` nor `cookie.maxAge` are specified.
 
-* `expireAfter`: session lifetime in seconds (or lifetime of the credentials backup). Defaults to 3600 (1 hour).
+* `refreshAfter`: controls session keep-alive behavior by forcing re-encryption of the cookie after the specified number of milliseconds from its creation or last 
+refresh. If not set, defaults to 1/2 of `expireAfter` value; to disable session keep-alive completely set it to a value greater or equal to `expireAfter`. Note that
+the cookie is always refreshed if the underlying data are modifed by the application. Setting `refreshAfter` to 0 will force the cookie to refresh on every request 
+no matter what.
 
-* `refreshAfter`: forces re-encryption of the cookie after so many seconds from its creation or last refresh. If not set, defaults to 1/2 of `expireAfter` 
-value; to disable session keep-alive completely set it to a value greater or equal to `expireAfter` (it will still be refreshed if `req.session` or 
-`req.creds`, respectively, are modified). Setting it to 0 will force the cookie to refresh on every request no matter what.
+* `timestamp`: defaults to `true` when `expireAfter` is set. This setting adds the `"exp"` property to cookie content and checks it on every access to guard against 
+possible replay attacks. Set to `false` when application-controlled checks make the timestamp unnecessary; the setting is ignored if neither `expireAfter` nor 
+`cookie.maxAge` are specified as part of options.
 
-* `ignoreChanges`: set to `true` to disable refresh of the cookie when `req.session` or `req.creds` are modified by your application. The session data or credential
-backup data will be frozen after initial population; the cookie may still be refreshed as part of the keep-alive logic if so desired (see `refreshAfter`).
+* `cipher`: a callback function accepting three arguments (key, plaintext and callback); the callback is invoked with the resulting ciphertext, or with the error 
+object. Key, plaintext and ciphertext are `Buffer`s. The library provides a default version using AES-256 with a random intialization vector.
 
-* `timestamp`: defaults to `true` which causes the `"exp"` property to be added to the cookie content and checked on every access to guard against possible replay
-attacks. Set to `false` when application-controlled checks make the timestamp unnecessary.
-
-* `cipher`: a callback function accepting two arguments (key and plaintext) and returning the ciphertext, all as binary-encoded strings. The library 
-provides a default version using AES-256 (expecting 256-bit keys from the key manager).
-
-* `decipher`: a callback function accepting two arguments (key and ciphertext) and returning the plaintext, all as binary-encoded strings. The library 
-provides a counterpart to the default implementation of `cipher`.
+* `decipher`: a counterpart function to `cipher` with the same parameter types; `cipher` and `decipher` should be provided together or not at all.
 
 * `keyManager`: a callback function called with no arguments to generate a new key or with a single string argument, key ID, taken from the cookie name. In
-either case, the key manager should return a plain object with 2 properties: `id` and `key`. The key returned should be compatible with `cipher` and
-`decipher` implementations in use. The library provides a default key manager that uses a stored (either configured or automatically generated) secret
-and combines it with a random nonce to obtain the key.
+either case, the key manager should return a plain object with at least 2 properties: `id` (a string suitable to become part of a cookie name) and `value` 
+(a `Buffer`). The key returned should be compatible with `cipher` and `decipher` implementations in use. The library provides a default key manager that 
+uses stored (either configured or automatically generated) secret and combines it with current timestamp to obtain the key.
 
 * `secret`: only used by the default key manager. If not set, the secret is generated automatically so it could not be shared with other instances of the
 same application or with other applications and it will not be preserved across the server restart. Set it to a long (160 bit is good) pseudorandom bit string
-(in binary encoding); you can obtain one from `crypto.randomBytes()`.
+(in binary encoding); you can obtain one by calling `crypto.randomBytes( 20 )`.
+
+* `cookie`: initial property settings for the cookie object, as follows:
+** `domain`: if not speficied, will be left blank effectively restricting the cookie to current host;
+** `path`: defaults to `"/"`;
+** `maxAge`: cookie (and session) lifetime in _seconds_; it is recommended to use the `expireAfter` option which overrides `maxAge`;
+** `httpOnly`: defaults to `true` if `cookie` is not specified at all, otherwise should be specified explicitly;
+** `secure`: set to `true` to transmit the cookie only through HTTPS; the library code ignores this setting.
+
+### Properties and methods of the session object
+
+* `cookie`: can be used to dynamically adjust cookie properties (`domain`, `path`, `httpOnly`, `secure`, `maxAge` or `expires`) on a per-request basis. Note that
+a change to any of these properties does not automatically re-encrypt and resend the cookie; you may have to call `save()` method on the session object to force it.
+
+* `regenerate()`: regenerates the session and destroys old content.
+
+* `destroy()`: destroys the session content; will remove the cookie if new content is not added to the session afterwards.
+
+* `reload()`: resets the session object content to the data that were received with the cookie.
+
+* `save()`: forces the library to re-encrypt and resend the session with the response to current request.
+
+### Differences from `Connect.session`
+
+While galette API is generally backwards compatible, there are certain differences due to the nature of its implementation:
+
+* Changes to session made after response headers have been sent will be ignored;
+
+* `destroy()` does not destroy the session object itself, only its user-supplied properties;
+
+* `touch()` is not provided.
+
 

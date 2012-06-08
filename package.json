@@ -1,6 +1,6 @@
 {
   "name": "galette",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Encrypted cookies for session store, credential backup and single sign-on",
   "author": {
     "name": "Max Motovilov",

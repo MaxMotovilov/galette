@@ -18,15 +18,18 @@ function useDefaults( options ) {
 	if( !options.keyManager )
 		options.keyManager = require( './lib/key_manager' )( options.secret );
 
-	if( !('expireAfter' in options) )
-		options.expireAfter = ( options.cookie && options.cookie.maxAge || 0 ) * 1000;
+	if( !('expireAfter' in options) ) {
+		options.expireAfter = options.cookie && options.cookie.maxAge;
+		if( options.expireAfter )	options.expireAfter *= 1000;
+		else	options.expireAfter = null;
+	}
 
 	if( options.expireAfter && !('timestamp' in options) )		
 		options.timestamp = true;
 	else if( !options.expireAfter )
 		options.timestamp = false;
 
-	if( !('refreshAfter' in options) )
+	if( !('refreshAfter' in options) && options.expireAfter )
 		options.refreshAfter = options.expireAfter/2;
 
 	if( !options.name )	
