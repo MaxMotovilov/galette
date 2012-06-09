@@ -185,10 +185,15 @@ same application or with other applications and it will not be preserved across 
 (in binary encoding); you can obtain one by calling `crypto.randomBytes( 20 )`.
 
 * `cookie`: initial property settings for the cookie object, as follows:
+
 ** `domain`: if not speficied, will be left blank effectively restricting the cookie to current host;
+
 ** `path`: defaults to `"/"`;
-** `maxAge`: cookie (and session) lifetime in _seconds_; it is recommended to use the `expireAfter` option which overrides `maxAge`;
+
+** `maxAge`: cookie (and session) lifetime in _seconds_; it is recommended to use the `expireAfter` option which overrides `maxAge`;'
+
 ** `httpOnly`: defaults to `true` if `cookie` is not specified at all, otherwise should be specified explicitly;
+
 ** `secure`: set to `true` to transmit the cookie only through HTTPS; the library code ignores this setting.
 
 ### Properties and methods of the session object
