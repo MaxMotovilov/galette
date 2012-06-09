@@ -186,15 +186,15 @@ same application or with other applications and it will not be preserved across 
 
 * `cookie`: initial property settings for the cookie object, as follows:
 
-** `domain`: if not speficied, will be left blank effectively restricting the cookie to current host;
+ * `domain`: if not speficied, will be left blank effectively restricting the cookie to current host;
 
-** `path`: defaults to `"/"`;
+ * `path`: defaults to `"/"`;
 
-** `maxAge`: cookie (and session) lifetime in _seconds_; it is recommended to use the `expireAfter` option which overrides `maxAge`;'
+ * `maxAge`: cookie (and session) lifetime in _seconds_; it is recommended to use the `expireAfter` option which overrides `maxAge`;'
 
-** `httpOnly`: defaults to `true` if `cookie` is not specified at all, otherwise should be specified explicitly;
+ * `httpOnly`: defaults to `true` if `cookie` is not specified at all, otherwise should be specified explicitly;
 
-** `secure`: set to `true` to transmit the cookie only through HTTPS; the library code ignores this setting.
+ * `secure`: set to `true` to transmit the cookie only through HTTPS; the library code ignores this setting.
 
 ### Properties and methods of the session object
 
