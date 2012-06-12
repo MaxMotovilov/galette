@@ -45,36 +45,41 @@ function useDefaults( options ) {
 	}
 }
 
-function patchServerResponse( res, async_update ) {
-	var writeHead = res.writeHead,
-		write = res.write,
-		_send = res._send,
-		queue = [],
-		started;
+var proxies = [ 'writeHead', 'end', 'write' ];
 
-	function bind( self, fn, args ) {
-		return function(){
-			return fn.apply( self, args );
-		}
+function copyProps( to, from, props ) {
+	props.forEach( function(p){ to[p] = from[p]; } );
+}
+
+function bind( self, fn, args ) {
+	return function(){
+		return fn.apply( self, args );
 	}
+}
 
-	res.writeHead = function( status ) {
-		this.statusCode = status;
-		queue.push( bind( this, writeHead, arguments ) );
+function patchServerResponse( res, async_update ) {
+	var orig = {},
+		queue = [],
+		started = false,
+		paused = false,
+		last_result;
 
-		if( !started )
-			started = promise.when(
+	copyProps( orig, res, proxies );
+
+	function commit() {
+		return started ||
+			(started = promise.when(
 				async_update( res ),
 				function() {
-					res.writeHead = writeHead;
-					res.write = write;
-					res._send = _send;
-					queue.forEach( function(c){c();} );
+					copyProps( res, orig, proxies );
+					queue.forEach( function(c){
+						last_result = c();
+					} );
+					if( paused )	res.emit( 'drain' );
+					return true;
 				},
 				function( err ) {
-					res.writeHead = writeHead;
-					res.write = write;
-					res._send = _send;
+					copyProps( res, orig, proxies );
 					res.writeHead( 500, {
 						'Content-Type': 'text/plain'
 					} );
@@ -82,16 +87,25 @@ function patchServerResponse( res, async_update ) {
 						'galette failed to update session cookie(s):\n' +
 						err.toString()
 					);
+					return true;
 				}
-			);
+			));
 	}
 
-	res._send = function() {
-		queue.push( bind( this, _send, arguments ) );
+	res.writeHead = function( status ) {
+		this.statusCode = status;
+		queue.push( bind( this, orig.writeHead, arguments ) );
+		commit();
+	}
+
+	res.end = function() {
+		queue.push( bind( this, orig.end, arguments ) );
+		return !( commit().then && (paused = true) ) && last_result;
 	}
 
 	res.write = function() {
-		queue.push( bind( this, write, arguments ) );
+		queue.push( bind( this, orig.write, arguments ) );
+		return !( commit().then && (paused = true) ) && last_result;
 	}
 }
 
