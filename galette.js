@@ -47,6 +47,7 @@ function useDefaults( options ) {
 
 function patchServerResponse( res, async_update ) {
 	var writeHead = res.writeHead,
+		write = res.write,
 		_send = res._send,
 		queue = [],
 		started;
@@ -66,11 +67,13 @@ function patchServerResponse( res, async_update ) {
 				async_update( res ),
 				function() {
 					res.writeHead = writeHead;
+					res.write = write;
 					res._send = _send;
 					queue.forEach( function(c){c();} );
 				},
 				function( err ) {
 					res.writeHead = writeHead;
+					res.write = write;
 					res._send = _send;
 					res.writeHead( 500, {
 						'Content-Type': 'text/plain'
@@ -85,6 +88,10 @@ function patchServerResponse( res, async_update ) {
 
 	res._send = function() {
 		queue.push( bind( this, _send, arguments ) );
+	}
+
+	res.write = function() {
+		queue.push( bind( this, write, arguments ) );
 	}
 }
 
