@@ -1,10 +1,12 @@
-// Copyright (C) 2012 ...Max... & Adstream Holdings
+// Copyright (C) 2014 12 Quarters Consulting
+//           (C) 2012 ...Max... & Adstream Holdings
 // All rights reserved.
 // Redistribution and use are permitted under the modified BSD license
 // available at https://github.com/MaxMotovilov/adstream-js-frameworks/wiki/License
 
 var	connect = require( 'connect' ),
 	SessionState = require( './lib/session' ),
+	merge = require( 'utils-merge' ),
 	promise = require( 'node-promise' );
 
 function useDefaults( options ) {
@@ -13,7 +15,7 @@ function useDefaults( options ) {
 		throw Error( '"cipher" and "decipher" should be specified together' );
 
 	if( !options.cipher )
-		connect.utils.merge( options, require( './lib/cipher' ) );
+		merge( options, require( './lib/cipher' ) );
 
 	if( !options.keyManager )
 		options.keyManager = require( './lib/key_manager' )( options.secret );
