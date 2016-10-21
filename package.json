@@ -25,6 +25,6 @@
     "url": "git://github.com/MaxMotovilov/galette.git"
   },
   "engines": {
-    "node": "*"
+    "node": ">=0.9.3"
   }
 }
