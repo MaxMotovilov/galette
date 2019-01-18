@@ -1,4 +1,4 @@
-// Copyright (C) 2014 12 Quarters Consulting
+// Copyright (C) 2014-2019 12 Quarters Consulting
 //           (C) 2012 ...Max... & Adstream Holdings
 // All rights reserved.
 // Redistribution and use are permitted under the modified BSD license
@@ -10,7 +10,7 @@ var	connect = require( 'connect' ),
 	promise = require( 'node-promise' );
 
 function useDefaults( options ) {
-	
+
 	if( (!options.cipher) !== (!options.decipher) )
 		throw Error( '"cipher" and "decipher" should be specified together' );
 
@@ -26,7 +26,7 @@ function useDefaults( options ) {
 		else	options.expireAfter = null;
 	}
 
-	if( options.expireAfter && !('timestamp' in options) )		
+	if( options.expireAfter && !('timestamp' in options) )
 		options.timestamp = true;
 	else if( !options.expireAfter )
 		options.timestamp = false;
@@ -34,12 +34,12 @@ function useDefaults( options ) {
 	if( !('refreshAfter' in options) && options.expireAfter )
 		options.refreshAfter = options.expireAfter/2;
 
-	if( !options.name )	
+	if( !options.name )
 		options.name = 'session';
 
 	if( !options.cookie )
 		options.cookie = { httpOnly: true, path: '/' };
-	else {	
+	else {
 		if( options.cookie.maxAge )
 			delete options.cookie.maxAge;
 		if( !options.cookie.path )
@@ -85,7 +85,7 @@ function patchServerResponse( res, async_update ) {
 					res.writeHead( 500, {
 						'Content-Type': 'text/plain'
 					} );
-					res.end( 
+					res.end(
 						'galette failed to update session cookie(s):\n' +
 						err.toString()
 					);
@@ -130,16 +130,16 @@ module.exports = function( options ) {
 				Object.keys( req.cookies )
 					.map( function( cname ) {
 						var	spl;
-						if( spl = splitter.exec( cname ) )	
+						if( spl = splitter.exec( cname ) )
 							return state.initialize.call( req[name], spl[1], req.cookies[cname] );
 					} )
 			),
-			(function() { 
+			(function() {
 				next();
 				this.resume();
 			 }).bind( connect.utils.pause( req ) )
 		);
-		
+
 		patchServerResponse( res, state.commit.bind( req[name] ) );
 	}
 }
